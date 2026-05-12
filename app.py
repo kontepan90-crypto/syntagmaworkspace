@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request, jsonify
 import sqlite3
 import os
-from datetime import datetime
 
 app = Flask(__name__)
-DB_PATH = "bookings.db"
 
-# --- Database setup ---
+# Χρησιμοποιεί /tmp που είναι πάντα writable στο Railway
+DB_PATH = "/tmp/bookings.db"
+
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -27,7 +27,8 @@ def init_db():
     conn.commit()
     conn.close()
 
-# --- Routes ---
+init_db()
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -46,13 +47,9 @@ def create_booking():
         INSERT INTO bookings (name, email, phone, package, start_date, end_date, notes)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
-        data["name"],
-        data["email"],
-        data.get("phone", ""),
-        data["package"],
-        data["start_date"],
-        data.get("end_date", ""),
-        data.get("notes", "")
+        data["name"], data["email"], data.get("phone", ""),
+        data["package"], data["start_date"],
+        data.get("end_date", ""), data.get("notes", "")
     ))
     booking_id = c.lastrowid
     conn.commit()
@@ -64,7 +61,6 @@ def create_booking():
         "message": f"Η κράτησή σου #{booking_id} καταχωρήθηκε! Θα επικοινωνήσουμε σύντομα."
     }), 201
 
-# Admin: δες όλες τις κρατήσεις (προστάτεψε με password αν θες)
 @app.route("/admin/bookings")
 def admin_bookings():
     conn = sqlite3.connect(DB_PATH)
@@ -76,6 +72,5 @@ def admin_bookings():
     return jsonify(rows)
 
 if __name__ == "__main__":
-    init_db()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
